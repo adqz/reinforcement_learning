@@ -29,7 +29,14 @@ class Replay():
         param: action_dim : Size of the action space
         param: env : gym environment object
         """
-        raise NotImplementedError
+        self.buffer_size = buffer_size
+        # self.init_length = init_length
+        self.state_dim = state_dim
+        self.action_dim = action_dim
+        self.buffer = []
+        state = env.reset()
+        # need policy to get action
+        # for i in range(init_length):
 
     # TODO: Complete the function
     def buffer_add(self, exp):
@@ -37,7 +44,7 @@ class Replay():
         A function to add a dictionary to the buffer
         param: exp : A dictionary consisting of state, action, reward , next state and done flag
         """
-        raise NotImplementedError
+        pass
 
     #TODO: Complete the function
     def buffer_sample(self, N):
@@ -45,19 +52,25 @@ class Replay():
         A function to sample N points from the buffer
         param: N : Number of samples to obtain from the buffer
         """
-        raise NotImplementedError
+        pass
 
 
 # TODO: Define an Actor
 class Actor(nn.Module):
     #TODO: Complete the function
-    def __init__(self, state_dim, action_dim):
+    def __init__(self, state_dim, action_dim, lr):
         """
         Initialize the network
         param: state_dim : Size of the state space
         param: action_dim: Size of the action space
         """
-        raise NotImplementedError
+        self.fc1 = nn.Linear(state_dim, 400)
+        self.hidden1 = nn.Linear(400, 300)
+        self.fc2 = nn.Linear(300, action_dim)
+        self.tanh = nn.Tanh()
+        self.relu = nn.ReLU()
+        # Define optimizer
+        self.optimizer = optim.Adam(self.parameters(), lr=lr)
 
     #TODO: Complete the function
     def forward(self, state):
@@ -65,26 +78,40 @@ class Actor(nn.Module):
         Define the forward pass
         param: state: The state of the environment
         """
-        raise NotImplementedError
+        state = self.relu(self.fc1(state))
+        state = self.relu(self.hidden(state))
+        state = self.tanh(self.fc2(state))
+
+        return state
 
 
 # TODO: Define the Critic
 class Critic(nn.Module):
     # TODO: Complete the function
-    def __init__(self, state_dim, action_dim):
+    def __init__(self, state_dim, action_dim, lr):
         """
         Initialize the critic
         param: state_dim : Size of the state space
         param: action_dim : Size of the action space
         """
-        raise NotImplementedError
+        self.fc1 = nn.Linear(state_dim + action_dim, 400)
+        self.hidden1 = nn.Linear(400, 300)
+        self.fc2 = nn.Linear(300, 1)
+        self.relu = nn.ReLU()
+        # Define optimizer
+        self.optimizer = optim.Adam(self.parameters(), lr=lr)
+        
 
     # TODO: Complete the function
     def forward(self, state, action):
-        """
-        Define the forward pass of the critic
-        """
-        raise NotImplementedError
+        """ Define the forward pass of the critic """
+        
+        x = torch.tensor([state, action]).double() #might need work to get it working
+        x = self.relu(self.fc1(x))
+        x = self.relu(self.hidden(x))
+        x = self.tanh(self.fc2(x))
+        
+        return x
 
 
 # TODO: Implement a DDPG class
@@ -143,7 +170,7 @@ class DDPG():
         """
         A function to update the function just once
         """
-        raise NotImplementedError
+        pass
 
     # TODO: Complete the function
     def train(self, num_steps):
@@ -151,31 +178,31 @@ class DDPG():
         Train the policy for the given number of iterations
         :param num_steps:The number of steps to train the policy for
         """
-        raise NotImplementedError
+        pass
 
 
 if __name__ == "__main__":
     # Define the environment
     env = gym.make("modified_gym_env:ReacherPyBulletEnv-v1", rand_init=False)
 
-    ddpg_object = DDPG(
-        env,
-        8,
-        2,
-        critic_lr=1e-3,
-        actor_lr=1e-3,
-        gamma=0.99,
-        batch_size=100,
-    )
-    # Train the policy
-    ddpg_object.train(100)
+    # ddpg_object = DDPG(
+    #     env,
+    #     8,
+    #     2,
+    #     critic_lr=1e-3,
+    #     actor_lr=1e-3,
+    #     gamma=0.99,
+    #     batch_size=100,
+    # )
+    # # Train the policy
+    # ddpg_object.train(100)
 
-    # Evaluate the final policy
-    state = env.reset()
-    done = False
-    while not done:
-        action = ddpg_object.actor(state).detach().squeeze().numpy()
-        next_state, r, done, _ = env.step(action)
-        env.render()
-        time.sleep(0.1)
-        state = next_state
+    # # Evaluate the final policy
+    # state = env.reset()
+    # done = False
+    # while not done:
+    #     action = ddpg_object.actor(state).detach().squeeze().numpy()
+    #     next_state, r, done, _ = env.step(action)
+    #     env.render()
+    #     time.sleep(0.1)
+    #     state = next_state
