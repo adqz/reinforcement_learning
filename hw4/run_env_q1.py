@@ -83,6 +83,7 @@ if __name__ == '__main__':
     try:
     print('Stats when saved - Avg Reward: {0:.3f} \t Obj(Actor): {1:.3f} \t Loss(Critic): {2:.3f}'\
         .format(network_state_dict['avg_reward'],network_state_dict['obj_actor'], network_state_dict['loss_critic']))
+    print('Seed used: ', network_state_dict['seed'])
     except KeyError:
         pass
     print(' =======> Model loaded. Rendering Environment now')
