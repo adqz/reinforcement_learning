@@ -74,7 +74,7 @@ class Actor(nn.Module):
 if __name__ == '__main__':
 
     state_dim, action_dim = 8, 2    
-    policy_network_file = './q1_policy_1' + '.pth.tar'
+    policy_network_file = './q1_policy_5' + '.pth.tar'
     policy_network = Actor(state_dim, action_dim)
 
     print(' =======> Loading model from file ', policy_network_file)
