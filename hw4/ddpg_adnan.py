@@ -182,15 +182,20 @@ class Critic(nn.Module):
     def forward(self, state, action):
         """ Define the forward pass of the critic """
         assert isinstance(state, np.ndarray)
-        assert isinstance(action, np.ndarray)
+        # assert isinstance(action, np.ndarray)
         assert state.shape[1] == self.state_dim, 'state must be of dim (batch_size, %d)'%self.state_dim
-        assert action.shape[1] == self.action_dim, 'action must be of dim (batch_size, %d)'%self.action_dim
+        # assert action.shape[1] == self.action_dim, 'action must be of dim (batch_size, %d)'%self.action_dim
         
-        state, action = torch.from_numpy(state).float(), torch.from_numpy(action).float() #numpy to torch tensor
+        state = torch.from_numpy(state).float(),  #numpy to torch tensor
+        
+        if isinstance(action, np.ndarray):
+            action = torch.from_numpy(action).float()
+
         try:
             x = torch.cat((state, action), dim=0) #concatenating to form input
         except RuntimeError:
             x = torch.cat((state, action), dim=1) #concatenating to form input
+        
         x = self.relu(self.fc1(x))
         x = self.relu(self.hidden1(x))
         x = self.fc2(x)
@@ -294,8 +299,8 @@ class DDPG():
         """
         A function to update the target networks
         """
-        weighSync(self.actor_target, self.actor)
-        weighSync(self.critic_target, self.critic)
+        self.actor_target, self.actor = weighSync(self.actor_target, self.actor)
+        self.critic_target, self.critic = weighSync(self.critic_target, self.critic)
     
     def getAverageReward(self):
         ''' Run the policy and return average reward '''
@@ -348,15 +353,17 @@ class DDPG():
             s_prime = np.array([el[3] for el in minibatch])                  #dim (batch_size, state_dim)
             
             a_target = self.actor_target.getAction(s_prime, add_noise_flag=False) #dim(batch_size, action_dim)
+            assert s_prime.shape[0] == a_target.shape[0], 'First dim should be batch_size'
+
+            print('type(s_prime), s_prime = ', type(s_prime), s_prime)
             y_i = r + gamma*self.critic_target(s_prime, a_target)            #dim (batch_size, 1)
             loss_critic = self.loss_fn(self.critic(s,a), y_i) #mse loss      #dim (batch_size, 1)
             
-            a = self.actor.getAction(s_prime, add_noise_flag=False)
+            a = self.actor(s)
+            # a = self.actor.getAction(s, add_noise_flag=False)
             obj_actor = self.critic(s, a).mean()
             
-            # Zero gradients of optimizer
-            self.optimizer_critic.zero_grad()    
-            self.optimizer_actor.zero_grad()
+            
             # Update critic
             loss_critic.backward()
             self.optimizer_critic.step()
@@ -370,6 +377,10 @@ class DDPG():
             # Store losses
             self.obj_actor.append(obj_actor.item())
             self.loss_critic.append(loss_critic.item())
+
+            # Zero gradients of optimizer
+            self.optimizer_critic.zero_grad()    
+            self.optimizer_actor.zero_grad()
             
             if num_steps%self.ev_n_steps == 0:
                 r = self.getAverageReward()
@@ -387,8 +398,8 @@ class DDPG():
                 
                 self.avg_rewards.append(r)
                 if verbose:
-                    print('Num steps: {0} \t Avg Reward: {1:.3f} \t Obj(Actor): {2:.3f} \t Loss(Critic): {3:.3f}'
-                          .format(num_steps, r, obj_actor.item(), loss_critic.item()))
+                    print('Num steps: {0} \t Avg Reward: {1:.3f} \t Obj(Actor): {2:.3f} \t Loss(Critic): {3:.3f} \t Num eps: {4}'
+                          .format(num_steps, r, obj_actor.item(), loss_critic.item(), self.num_episodes))
                 
 
 
@@ -402,7 +413,7 @@ if __name__ == "__main__":
     
     # Define the environment
     env = gym.make("modified_gym_env:ReacherPyBulletEnv-v1", rand_init=True)
-    test_env = copy.deepcopy(env)
+    test_env = gym.make("modified_gym_env:ReacherPyBulletEnv-v1", rand_init=False)
     plot = True
     verbose = True
     
@@ -415,12 +426,12 @@ if __name__ == "__main__":
         critic_lr=1e-3,
         actor_lr=1e-4,
         gamma=0.99,
-        batch_size=100,
-        ev_n_steps=1000, #evaluate every n steps
+        batch_size=500,
+        ev_n_steps=200, #evaluate every n steps
         verbose=verbose
     )
     # Train the policy
-    ddpg_object.train(int(1e6))
+    ddpg_object.train(int(5e5))
     
     # Save actor
     ddpg_object.save_actor(args.index)
